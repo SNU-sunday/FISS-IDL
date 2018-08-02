@@ -171,7 +171,7 @@ for dir_loop=0, n_elements(directories)-1 do begin
         
         proc_files = strarr(nf)
         for target=0, ndark-1 do begin
-          target_dir = prdir + 'target' + string(target, format='(i02)')
+          target_dir = prdir + delim + 'target' + string(target, format='(i02)')
           file_mkdir, target_dir
           wh = where(file_basename(darkfiles) lt dark[target])
           proc_files[wh]= target_dir +delim+strmid(filebases[wh], 0, strlen(filebases[0])-4)+'1.fts'
