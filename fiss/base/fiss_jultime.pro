@@ -29,13 +29,13 @@ endif
 ;;    stop
 ;endfor
 
-position=(strpos(f_fiss[0], '*FISS*'))[0]
-yr=strmid(f_fiss, position+6, 4)
-mon=strmid(f_fiss, position+10, 2)
-dat=strmid(f_fiss, position+12, 2)
-hr=strmid(f_fiss, position+15, 2)
-min=strmid(f_fiss, position+17, 2)
-sec=strmid(f_fiss, position+19, 2)
+base=file_basename(f_fiss)
+yr=strmid(base,5, 4)
+mon=strmid(base,9, 2)
+dat=strmid(base, 11, 2)
+hr=strmid(base, 14, 2)
+min=strmid(base, 16, 2)
+sec=strmid(base, 18, 2)
 time=julday(mon, dat, yr, hr, min, sec)
 return, time
 end

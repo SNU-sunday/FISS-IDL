@@ -146,11 +146,16 @@ for dir_loop=0, n_elements(directories)-1 do begin
       print, 'processing files in directory: '+reg_dir
       
       region=file_basename(reg_dir)
-      file_mkdir, proc_dir+region
+      prdir =  proc_dir + region
+      file_mkdir, prdir
       
       for idet=idet1,  idet2 do begin
         detector=(['A', 'B'])[idet]
         datafiles=file_search(reg_dir+delim+'*'+detector+'.fts', count=nf)
+        dark_files = file_search(reg_dir+delim+'*'+detector+'_BiasDark.fts', count = ndark)
+        dark = file_basename(dark_files)
+
+       
         if nf lt 1 then goto, next
         if useref then begin
           calfiles=fiss_calfile_v2(datafiles,  cal_dir, type='cal', det=detector)
@@ -163,11 +168,18 @@ for dir_loop=0, n_elements(directories)-1 do begin
         flatfiles=fiss_calfile_v2(datafiles, proc_cal_dir, type='flat', det=detector)
         slitfiles=fiss_calfile_v2(datafiles, proc_cal_dir, type='slit', det=detector)
         filebases=file_basename(datafiles)
-  
-        proc_files= proc_dir+region+delim+strmid(filebases, 0, strlen(filebases[0])-4)+'1.fts'
+        
+        proc_files = strarr(nf)
+        for target=0, ndark-1 do begin
+          target_dir = prdir + 'target' + string(target, format='(i02)')
+          file_mkdir, target_dir
+          wh = where(file_basename(darkfiles) lt dark[target])
+          proc_files[target]= target_dir +delim+strmid(filebases[wh], 0, strlen(filebases[0])-4)+'1.fts'
+        endfor
+        
         calfile=''
         kref=0
-        for k=0, (nf-1) do  begin
+        for k=0, nf-1 do  begin
           tilt=float(fxpar(headfits(flatfiles[k]), 'TILT'))
           slit_pattern=readfits(slitfiles[k], /sil)    
           if calfiles[k] ne calfile then begin
@@ -181,8 +193,8 @@ for dir_loop=0, n_elements(directories)-1 do begin
           wait, 0.1
 ;          stop
         endfor  ; k
-        
-        next:
+          
+          next:
         
       endfor ; idet
       
@@ -198,14 +210,14 @@ for dir_loop=0, n_elements(directories)-1 do begin
     file_mkdir, comp_dir
     
     proc_dir=data_dir+'proc'+delim
-    regs_dir=file_search(proc_dir+'*', count=nreg)
+    regs_dir=file_search(proc_dir+'*/*', count=nreg)
     if nreg eq 0 then begin
       print, 'Directory: '+ raw_dir+' does not contain any region! ...returning from FISS_PROCESS_DAY'
       stop
     endif
     
     
-    for reg=0,  ( nreg-1)  do begin
+    for reg=0,  nreg-1  do begin
       reg_dir=regs_dir[reg]
       npfile = 0
       print, 'compressing files in directory: '+reg_dir
