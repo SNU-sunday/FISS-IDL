@@ -39,7 +39,7 @@ file1= strmid(file, 0, strlen(file)-4)
 cfile=file ; if strmid(file1, strlen(file1)-2, 2) eq '_c' then cfile=file else cfile=file1+'_c.fts'
 hc=headfits(cfile)
 if n_params() gt 2 then h=fxpar(hc, 'COMMENT')
-dir=file_dirname(cfile)+'/'
+dir=file_dirname(cfile)+path_sep()
 pfile=dir+fxpar(hc,'pfile')
 evec=readfits(pfile, /sil)
 coeff=readfits(cfile, nslice=x, /sil)
