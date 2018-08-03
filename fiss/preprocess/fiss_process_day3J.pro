@@ -94,6 +94,9 @@ for dir_loop=0, n_elements(directories)-1 do begin
           for ii = 0, n_raw_for_tilt-1 do begin
             raw = readfits(raw_for_tilt[ii], h0, /sil)
             rawsz = size(raw)
+            rflat = rebin(average(readfits(fflats[k]),3),rawsz[1:3])
+            rdark = rebin(readfits(fdarks[k<(ndark-1)]),rawsz[1:3])
+            raw = (raw - rdark) / rflat
             pick = 0
             repeat begin
               pick = pick+10
