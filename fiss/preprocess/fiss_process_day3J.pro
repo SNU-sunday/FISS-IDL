@@ -210,7 +210,7 @@ for dir_loop=0, n_elements(directories)-1 do begin
     file_mkdir, comp_dir
     
     proc_dir=data_dir+'proc'+delim
-    regs_dir=file_search(proc_dir+'*/*', count=nreg)
+    regs_dir=file_search(proc_dir+'*/target*', count=nreg)
     if nreg eq 0 then begin
       print, 'Directory: '+ raw_dir+' does not contain any region! ...returning from FISS_PROCESS_DAY'
       stop
