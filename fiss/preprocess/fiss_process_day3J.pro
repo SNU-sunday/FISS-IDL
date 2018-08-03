@@ -98,12 +98,18 @@ for dir_loop=0, n_elements(directories)-1 do begin
             rdark = rebin(readfits(fdarks[k<(ndark-1)]),rawsz[1:3])
             raw = (raw - rdark) / rflat
             pick = 0
+            corcrit=0.92
             repeat begin
-              pick = pick+10
+              pick += 10
               img1 = reform(raw[pick, *, *])
               img2 = reform(raw[rawsz[1]-pick, *, *])
               tilt_off = alignoffset(img1, img2, cor)
-            endrep until cor gt 0.92
+              if cor lt corcrit and pick ge 510 then begin
+                corcrit -=0.05
+                print, 'Change critical value of correlation to ' + corcrit
+                pick=0 
+              endif
+            endrep until cor gt corcrit
             tilt_ang[ii] = -atan(tilt_off[0], (rawsz[1]-2.*pick))*180d0/!dpi
           endfor
           tilt = mean(tilt_ang)
