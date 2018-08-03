@@ -255,7 +255,7 @@ for dir_loop=0, n_elements(directories)-1 do begin
           wait, 0.1
           
         endfor  ; k
-        print, npfile
+        print, 'The number of _p.fits file is  ' + string(npfile)
         next1:
       endfor ; idet
       
