@@ -231,7 +231,7 @@ for dir_loop=0, n_elements(directories)-1 do begin
         filebases=file_basename(proc_files)
         comp_files=comp_dir+region+delim+strmid(filebases, 0, strpos(filebases[0], '1.fts'))+'1_c.fts'
         
-        if nf then h0 = headfits(proc_files[0])
+        if nf ne 0 then h0 = headfits(proc_files[0])
         
         calfile=''
         kref=0
