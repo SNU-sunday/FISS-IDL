@@ -106,7 +106,7 @@ for dir_loop=0, n_elements(directories)-1 do begin
               tilt_off = alignoffset(img1, img2, cor)
               if cor lt corcrit and pick ge 510 then begin
                 corcrit -=0.05
-                print, 'Change critical value of correlation to ' + corcrit
+                print, 'Change critical value of correlation to ' + string(corcrit)
                 pick=0 
               endif
             endrep until cor gt corcrit
