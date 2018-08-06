@@ -1,5 +1,6 @@
-function fiss_data_correct, w, inten, align, t, nocalib=nocalib, nrep=nrep,$
+function fiss_data_correct, w, inten, align, t, nocalib=nocalib, nrep=nrep, mask=mask,$
          offset=offset, xmargin=xmargin, ymargin=ymargin, intensity=int3, ionly=ionly
+
 
 if n_elements(offset) ne 2 then offset=[0, 0]
 if keyword_set(ionly) then vdet=0 else vdet=1
@@ -14,6 +15,7 @@ nx=n_elements(w[*,0,0])
 
 if vdet then w3=fltarr(nx+xmargin2,ny+ymargin2,nk)
 int3=fltarr(nx+xmargin2,ny+ymargin2,nk)
+mask=bytarr(nx+xmargin2, ny+ymargin2, nk)
 ;if n_elements(nrep) eq 0 then nrep=2
 ;if keyword_set(nocalib) then nrep=1
 
@@ -26,6 +28,7 @@ y=replicate(1,nx+xmargin2)#(findgen(ny+ymargin2)+ymargin[0])
 
 for k=0, nk-1 do begin
 fiss_get_pos,x,y,xc,yc,theta[k],dx[k],dy[k],xx, yy
+mask[*,*,k]=(xx ge 0) and (xx le nx-1) and (yy ge 0) and (yy le ny-1)
 if vdet then w3[*,*,k]=interpolate(w[*,*,k],xx,yy, missing=0.)
 int3[*,*,k]=interpolate(alog(inten[*,*,k]),xx,yy, missing=alog(median(inten[*,*,k])) )
 endfor

@@ -1,7 +1,7 @@
 function fiss_lambdameter, file, wr, hw, x1, x2, y1, y2, $
- pca=pca, pixel=pixel,sp0=sp0, smoo=smoo
+ pca=pca, pixel=pixel,sp0=sp0, smoo=smoo, wv0=wv0
 ;+
-;   Name: fiss_raster
+;   Name: fiss_lambdameter
 ;            Construct  maps of wavelength offset and intensity of a spectral line
 ;            either from FITS file or PCA files
 ;
@@ -30,6 +30,7 @@ function fiss_lambdameter, file, wr, hw, x1, x2, y1, y2, $
 ;         2015 June,  J. Chae, first coded.
 ;-
 if n_elements(pca) eq 0 then pca=1
+if n_elements(wv0) eq 0 then wv0=0.
 null=fiss_read_frame(file, 0, h)
 nx=fxpar(h, 'NAXIS3')
 ny=fxpar(h, 'NAXIS2')
@@ -64,7 +65,7 @@ endif else wvoffset=0.
 for w=0, nhw-1 do begin
 
 s=where((wv-wr[0,w])*(wv-wr[1,w]) le 0.)
-images[x-x1,*,0,w]=bisector_d(wv[s]-wvoffset, sp[s, y1:y2], hw[w], intensity)
+images[x-x1,*,0,w]=bisector_d(wv[s]-wvoffset-wv0, sp[s, y1:y2], hw[w], intensity)
 images[x-x1,*,1,w]=intensity
 endfor
 endfor

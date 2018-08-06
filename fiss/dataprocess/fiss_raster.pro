@@ -30,8 +30,9 @@ function fiss_raster, file, wv1, hw1, x1, x2, y1, y2, pca=pca, pixel=pixel
 ;   History:
 ;         2010 July,  first coded  (J. Chae)
 ;         2013 May, added parameters x1, x2, y1, y2 (J. Chae)
+;         2018 August,  wavelength in absolute scale
 ;-
-on_error, 1
+
 if n_elements(pca) eq 0 then pca=1
 
 nsel= n_elements(wv1)
@@ -55,7 +56,7 @@ endif else begin
 
 wc=fxpar(h, 'CRPIX1')
 dldw=fxpar(h, 'CDELT1')
-wl=(findgen(nw)-wc)*dldw
+wl=fiss_wv(file) ; (findgen(nw)-wc)*dldw
 
 w1=intarr(nsel)
 w2=intarr(nsel)

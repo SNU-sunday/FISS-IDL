@@ -1,3 +1,47 @@
+function fiss_group, files
+
+nf=n_elements(files)
+
+
+wv=fltarr(nf)
+xpos=fltarr(nf)
+ypos=fltarr(nf)
+t=fltarr(nf)
+index=indgen(nf)
+for k=0, nf-1 do begin
+tstring= strmid(files[k],  strpos(files[k], 'FISS_')+5, 15)
+if k eq 0 then tstringref=tstring
+t[k]=fiss_dt(tstringref, tstring)*(24*60.)  ; in min
+h=fxpar(headfits(files[k]), 'COMMENT')
+wv[k]=fxpar(h, 'CRVAL1')
+xpos[k]=fxpar(h, 'TEL_XPOS')
+ypos[k]=fxpar(h, 'TEL_YPOS')
+endfor
+
+
+group=0
+
+s1=0
+
+rep=0
+while (s1 le nf-1) and (rep le nf-1) do begin
+s=where(index ge s1 and abs(wv-wv[s1]) le 1. and $
+   abs(xpos-xpos[s1]) le 50. and abs(ypos-ypos[s1]) le 50., count)
+
+if count gt 0 then begin
+if s1 eq 0 then sindex=s1 else sindex=[sindex, s1]
+endif
+
+s1=max(s)+1
+rep=rep+1
+endwhile
+
+sindex=[sindex, nf]
+
+return, sindex
+
+end
+
 function fiss_raster_contrast, image
 s=size(image)
 contrast=fltarr(s[1])
@@ -9,6 +53,9 @@ pro plot_movies,  id, ids_a, scale_a, ids_b, scale_b
 
 a=readfits(id+'A.fts')
 b=readfits(id+'B.fts')
+maska=readfits(id+'Amask.fts')
+maskb=readfits(id+'Bmask.fts')
+
 t=readfits(id+'t.fts')
 
 sz=size(a)  &  npa=sz[1] & nx=sz[2] & ny=sz[3] & nk=sz[4]
@@ -24,7 +71,7 @@ wysize=2*(ny+label+2*gap)+label
 
 wxsize=wxsize+(wxsize mod 2)
 wysize=wysize+(wysize mod 2)
-window, /free, xsize=wxsize, ysize=wysize
+window, u, /free, xsize=wxsize, ysize=wysize
 
 ma=fltarr(npa)
 for p=0, npa-1 do  if (p eq 0) or (p mod 2 eq 1) then begin
@@ -58,6 +105,7 @@ erase
 loadct, 0, /sil
 xyouts,wxsize/2, wysize-label+2,  $
 't='+string(t[k], format='(f5.1)')+' min', font=0 , align=0.5, /dev
+xyouts,10, wysize-label+2, id, font=0 , align=0.0, /dev
 
 for p=0, npa-1 do begin
 xoff=(nx+2*gap)*p+gap
@@ -67,20 +115,23 @@ if (p eq 0) or (p mod 2 eq 1) then begin
 loadct_ch, /ha
 
 tmp=alog(a[p,*,*,k]/ma[p]>0.1)
-s=where(abs(tmp-smooth(tmp, 3)) lt 1.e-6)
+s=where(maska[*,*,k] eq 0)
 tmp[s]=0.
 tv, bytscl(tmp, alog(1+scale_a[0,p]), alog(1+scale_a[1,p])), xoff, yoff
+str=''
 endif else begin
 loadct, 33, /sil
 tmp=reform(a[p,*,*,k])
-s=where(abs(tmp-smooth(tmp, 3)) gt 1.e-6)
+s=where(maska[*,*,k] eq 1)
+;tmp1=tmp-ma[p] ;median(tmp[s])
 tmp1=tmp-median(tmp[s])
-s=where(abs(tmp-smooth(tmp, 3)) lt 1.e-6)
+s=where(maska[*,*,k] eq 0)
 tmp1[s]=0.
 tv, bytscl(tmp1, scale_a[0,p], scale_a[1,p]), xoff, yoff
+str=' '+string(scale_a[1,p],format='(f3.1)')+'km/s'
 endelse
 loadct, 0,/sil
-xyouts, xoff+nx/2,   yoff-label+2, align=0.5, ids_a[p], /dev, font=0
+xyouts, xoff+nx/2,   yoff-label+2, align=0.5, ids_a[p]+str, /dev, font=0
 
 endfor
 
@@ -98,21 +149,25 @@ endelse
 if (p eq 0) or (p mod 2 eq 1) then begin
 loadct_ch, /ca
 tmp=alog(b[p,*,*,k]/mb[p]>0.1)
-s=where(abs(tmp-smooth(tmp, 3)) lt 1.e-6)
+s=where(maskb[*,*,k] eq 0)
 tmp[s]=0.
 
 tv, bytscl(tmp, alog(1+scale_b[0,p]), alog(1+scale_b[1,p])), xoff, yoff
+str=''
 endif else begin
 loadct, 33, /sil
 tmp=reform(b[p, *,*,k])
-s=where(abs(tmp-smooth(tmp, 3)) gt 1.e-6)
+s=where(maskb[*,*,k] eq 1)
+;tmp1=tmp-mb[p] ;median(tmp[s])
 tmp1=tmp-median(tmp[s])
-s=where(abs(tmp-smooth(tmp, 3)) lt 1.e-6)
+s=where(maskb[*,*,k] eq 0)
 tmp1[s]=0.
 tv, bytscl(tmp1, scale_b[0,p], scale_b[1,p]), xoff, yoff
+str=' '+string(scale_b[1,p],format='(f3.1)')+'km/s
+
 endelse
 loadct, 0,/sil
-xyouts, xoff+nx/2,   yoff-label+2, align=0.5, ids_b[p], /dev, font=0
+xyouts, xoff+nx/2,   yoff-label+2, align=0.5, ids_b[p]+str, /dev, font=0
 endfor
 
 wait, 0.1
@@ -123,7 +178,7 @@ endfor
 ffmpeg, imagefiles, 10, output=id+'.mp4'
 
 wait, 1
-spawn, 'rm -rf imagetmp*.jpg'
+spawn, 'del imagetmp*.jpg' ,  /hide
 end
 pro fmargin, align, nx, ny, xmargin, ymargin
 
@@ -205,22 +260,19 @@ xyouts, (xoff+[0,xsize])*1000, (yoff+[-0.5, ysize+0.5])*1000, align=0.5, $
 ['(0,0)', '('+string(sz[2],format='(i3)')+','+string(sz[3],format='(i3)')+')'], font=1, /dev
 
 device, /close
-set_plot, 'x'
+set_plot, 'win'
 
 end
 
 
 
-;pro fiss_data, in_dir, out_dir
-device, decomposed=0
-in_dir='/hae/homedata/test/2018/06/18/comp/sunspot/'
-out_dir='/hae/homedata/test/2018/06/18/phys/sunspot/'
 
+pro fiss_data, fa, fb, out_dir, aligna, alignb
 t1=systime(/sec)
- cor_crit=0.85
+ cor_crit=0.6
  rno=5
 cd, out_dir
-set_plot, 'x'
+set_plot, 'win'
 ;
 ;
 ;
@@ -231,8 +283,6 @@ do_align=1
 if prepare then begin
 print, 'Peparing...'
 wait, 0.1
- fa=(file_search(in_dir+'*A1_c.fts'))[*]
- fb=(file_search(in_dir+'*B1_c.fts'))[*]
  nfa=n_elements(fa)
  nfb=n_elements(fb)
  ha=fxpar(headfits(fa[nfa/2]), 'comment')
@@ -246,53 +296,54 @@ wait, 0.1
  bandB=strmid(fxpar(hb, 'WAVELEN'), 0, 6)
 
 
-if  abs(wva-5890) le 2  then wvcona=5892.-wva
-if  abs(wvb-5435) le 2 then wvconb=5432.-wvb
-if  abs(wva-6563) le 2 then wvcona=-3.
-if  abs(wvb-8542) le 2 then wvconb=-3.
+if  abs(wva-5890) le 2  then wvcona=5892.
+if  abs(wvb-5435) le 2 then wvconb= 5432.
+if  abs(wva-6563) le 2 then wvcona=-3.+wva
+if  abs(wvb-8542) le 2 then wvconb=-3.+wvb
 
+print, wvb, wva
 hwcont=0.2
 
 if abs(wva-5890) le 2  then begin
-      cpar_a=[string(wvcona+wva, format='(i4)')+' Continuum', $
+      cpar_a=[string(wvcona, format='(i4)')+' Continuum', $
        'Na I 5890+-0.07 Intensity', 'Na I 5890+-0.07 Velocity (km/s)', $
-            'Na I 5890+-0.20 Intensity', 'Na I 5890+-0.20 Velocity (km/s)'  ]
-      ids_a=['Cont', 'NaI5890cI','NaI5890cV', 'NaI5890wI', 'NaI5890wV']
-      wr_a=[[-1,1],[-1,1]] +5890.-wva
-      hw_a=[0.07, 0.20]
+            'Fe I 5893+-0.05 Intensity', 'Fe I 5893+-0.05 Velocity (km/s)'  ]
+      ids_a=['Cont', 'NaI5890I','NaI5890V', 'FeI5893I', 'FeI5893V']
+      wr_a=[[5890.-1,5890.+1],[5892.7-0.5,5892.7+0.5]]
+      hw_a=[0.07, 0.05]
       npar_a=n_elements(cpar_a)
       nv_a=(npar_a-1)/2
-      scale_a=[[-0.5, 0.15], [-.5, 0.2], [-1., 1.],  [-0.4, 0.2], [-1., 1.]]
-       wvrest_a=[5889.973D, 5889.973D]
+      scale_a=[[-0.5, 0.15], [-.5, 0.2], [-1., 1.],  [-0.4, 0.1], [-0.5, 0.5]]
+       wvrest_a=[5889.973D, 5892.70D]
        calib_a=[0, 0]
       ;wvtella=5891.64
 endif
 
 if abs(wva-6563) le 2  then begin
-      cpar_a=[string(wvcona+wva, format='(i4)')+' Continnum', $
+      cpar_a=[string(wvcona, format='(i4)')+' Continnum', $
        'H I 6562.8+-0.20 Intensity', 'H I 6562.8+-0.20 Velocity(km/s)', $
-            'H I 6562.8+-0.50 Intensity', 'H I 6562.8+-0.50 Velocity (km/s)'  ]
-      ids_a=['Cont', 'HI6563cI','HI6563cV', 'HI6563wI', 'HI6563wV']
-      wr_a=[[-1.5,1.5],[-1.5,1.5]] +6562.8-wva
-      hw_a=[0.2, 0.50]
+            'Ti II 6560+-0.05 Intensity', 'Ti II 6560+-005 Velocity (km/s)'  ]
+      ids_a=['Cont', 'HI6563I','HI6563V', 'TiII6560I', 'TiII6560V']
+      wr_a=[[6562.8-1.5,6562.8+1.5],[6559.58-0.4,6559.58+0.4]]
+      hw_a=[0.2, 0.05]
       npar_a=n_elements(cpar_a)
       nv_a=(npar_a-1)/2
-      scale_a=[[-0.5, 0.1], [-0.5, 0.3], [-5, 5],  [-0.5, 0.3], [-5., 5.]]
-      wvrest_a=[6562.817D, 6562.817D]
+      scale_a=[[-0.5, 0.1], [-0.5, 0.3], [-5, 5],  [-0.5, 0.1], [-1, 1]]
+      wvrest_a=[6562.817D, 6559.58D]
       calib_a=[0,0]
       ;wvtella= 6563.521
 endif
 
 if abs(wvb-5435) le 2  then begin
-      cpar_b=[string(wvconb+wvb, format='(i4)')+' Continnum', $
+      cpar_b=[string(wvconb, format='(i4)')+' Continnum', $
         'Fe I 5434.5+-0.03 Intensity', 'Fe I 5434.5+-0.03 Velocity (km/s)', $
             'Ni I 5434.9+-0.03 Intensity', 'Ni I 5435.9+-0.03 Velocity (km/s)'  ]
       ids_b=['FeICont', 'FeI5435I', 'FeI5435V', 'NiI5436I', 'NiI5436V']
-      wr_b=[ [5434.5-0.3,5434.5+0.3],[5435.9-0.2,5435.9+0.2]]-wvb
+      wr_b=[ [5434.5-0.3,5434.5+0.3],[5435.9-0.2,5435.9+0.2]]
       hw_b=[ 0.05, 0.05]
       npar_b=n_elements(cpar_b)
       nv_b=(npar_b-1)/2
-      scale_b=[[-0.5, 0.15], [-0.5, 0.15], [-0.5, 0.5], [-0.5, 0.15], [-0.5, 0.5]]
+      scale_b=[[-0.5, 0.15], [-0.5, 0.15], [-0.5, 0.5], [-0.5, 0.11], [-0.5, 0.5]]
       wvrest_b=[5434.534D,  5435.866D0]
       calib_b=[0,0]
       ;wvtellb=5435.546
@@ -300,17 +351,17 @@ endif
 
 
 if abs(wvb-8542) le 2  then begin
-      cpar_b=[string(wvconb+wvb, format='(i4)')+' Continnum', $
+      cpar_b=[string(wvconb, format='(i4)')+' Continnum', $
         'Ca II 8542+-0.1 Intensity', 'Ca II 8542+-0.1 Velocity (km/s)', $
-             'Fe I 8538+-0.05 Intensity', 'Fe I 8538+-0.05 Velocity (km/s)'  ]
-      ids_b=['Cont', 'CaII8542I','CaII8542V', 'FeI8538I', 'FeI8538V']
-      wvrest_b=[8542.09D, 8538.015D]
+             'Si I 8536+-0.10 Intensity', 'Si I 8536+-0.10 Velocity (km/s)'  ]
+      ids_b=['Cont', 'CaII8542I','CaII8542V', 'SiI8536I', 'SiI8536V']
+      wvrest_b=[8542.09D, 8536.165D]
       wr_b=[ [wvrest_b[0]-0.5,wvrest_b[0]+0.5], $
-            [wvrest_b[1]-0.4, wvrest_b[1]+0.4]]-wvb
-      hw_b=[ 0.08, 0.05]
+            [wvrest_b[1]-0.4, wvrest_b[1]+0.4]]
+      hw_b=[ 0.12, 0.10]
       npar_b=n_elements(cpar_b)
       nv_b=(npar_b-1)/2
-      scale_b=[[-0.6, 0.15], [-0.6, 0.3], [-5, 5.], [-0.5, 0.15], [-1.,1.]]
+      scale_b=[[-0.6, 0.15], [-0.6, 0.3], [-5, 5.], [-0.5, 0.1], [-1.,1.]]
        calib_b=[0,0]
       ;wvtellb= 8540.817
 endif
@@ -318,6 +369,9 @@ endif
 
 
 ;  step select the reference file
+
+print, wvcona
+
 
 k0=(nfa/2-5)>0
 kref=fiss_find_best(fa[k0:k0+10],wvcona, hwcont)+k0
@@ -397,7 +451,7 @@ aligna=align
   if k mod 10 eq 0  then wait, 0.1
 
   pars[0,*,*,k]=fiss_raster(f[k], wvcona, hwcont, 0, nx-1, 0, nya-1)
-  tmp=fiss_lambdameter(f[k], wr_a, hw_a, 0, nx-1, 0, nya-1,sp0=sp0)
+  tmp=fiss_lambdameter(f[k], wr_a, hw_a, 0, nx-1, 0, nya-1,sp0=sp0, smoo=1, wv0=wva)
 
   for line=0, nv_a-1 do begin
    pars[line*2+1,*,*,k]=tmp[0:nx-1,*,1,line]
@@ -418,17 +472,15 @@ print, 'starting data-correcting...' & wait, 0.1
 
    tmp=reform(pars[0,*,*,*])
    dyummy=fiss_data_correct(tmp*0, tmp,  aligna, t, $
-     xmargin=xmargin, ymargin=ymargin, inten=inten, ionly=1)
+     xmargin=xmargin, ymargin=ymargin, inten=inten, ionly=1, mask=mask)
     pars_a[0,*,*,*]=inten
    for line=0, nv_a-1 do begin
    tmpint=reform(pars[line*2+1,*,*,*])
    tmp=reform(pars[line*2+2,*,*,*])
-   wvav[line]=median(tmp)
-   nocalib=1-calib_a[line]
-   pars_a[line*2+2,*,*,*]=fiss_data_correct(tmp-wvav[line], tmpint,  aligna, t,  $
-     xmargin=xmargin, ymargin=ymargin, inten=inten, nocalib=nocalib)+wvav[line]
+   pars_a[line*2+2,*,*,*]=fiss_data_correct(tmp, tmpint,  aligna, t,  $
+     xmargin=xmargin, ymargin=ymargin, inten=inten)
     pars_a[line*2+2,*,*,*]=(pars_a[line*2+2,*,*,*]+(wva-wvrest_a[line]) )*(3.e5/wvrest_a[line]) ; km/s
-   ;wvoffs[line, *,*]=wvoff
+
    pars_a[line*2+1,*,*,*]=inten
    endfor
    m=median(pars_a[2,*,*,*])
@@ -447,12 +499,14 @@ fxaddpar, h, 'XOFFSET', xmargin[0], 'Xoffset to be added to image coordinantes'
 fxaddpar, h, 'YOFFSET' , ymargin[0], 'Yoffset to be added to image coordinates'
 ;xdisplayfile, text=h
 writefits, id+'A.fts',  pars_a, h
+writefits, id+'Amask.fts', mask
 
 fxhmake, h, aligna.dt, /init
 fxaddpar, h, 'REFNO', (where(aligna.cor eq 1.))[0],  'the number of frame used as the reference'
 fxaddpar, h, 'REFTIME', strmid(id, 5, 15), ' reference time'
 fxaddpar, h, 'UNIT',  'min'
 writefits, id+'t.fts', aligna.dt, h
+
 
 endif
 
@@ -471,8 +525,9 @@ alignb=align
     print, 'nk-1-k=', nk-1-k
     if k mod 10 eq 0  then wait, 0.1
   pars[0,*,*,k]=fiss_raster(f[k], wvconb, hwcont, 0, nx-1, 0, nyb-1)
-  tmp=fiss_lambdameter(f[k], wr_b, hw_b, 0, nx-1, 0, nyb-1, sp0=sp0)
+  tmp=fiss_lambdameter(f[k], wr_b, hw_b, 0, nx-1, 0, nyb-1, sp0=sp0, smoo=1, wv0=wvb)
 
+;if k eq 2 then stop
 
   for line=0, nv_b-1 do begin
    pars[line*2+1,*,*,k]=tmp[*,*,1,line]
@@ -497,18 +552,15 @@ print, 'starting data-correcting...' & wait, 0.1
 
    tmp=reform(pars[0,*,*,*])
    dyummy=fiss_data_correct(tmp*0, tmp,  alignb, t,  $
-     xmargin=xmargin, ymargin=ymargin, inten=inten, ionly=1)
+     xmargin=xmargin, ymargin=ymargin, inten=inten, ionly=1, mask=maskb)
     pars_b[0,*,*,*]=inten
    for line=0, nv_b-1 do begin
    tmpint=reform(pars[line*2+1,*,*,*])
    tmp=reform(pars[line*2+2,*,*,*])
-   wvav[line]=median(tmp)
-   nocalib=1-calib_b[line]
-   pars_b[line*2+2,*,*,*]=fiss_data_correct(tmp-wvav[line], tmpint,  aligna, t,  $
-     xmargin=xmargin, ymargin=ymargin, inten=inten, nocalib=nocalib)+wvav[line]
-       pars_b[line*2+2,*,*,*]=(pars_b[line*2+2,*,*,*]+(wvb-wvrest_b[line]) )*(3.e5/wvrest_b[line]) ; km/s
 
-   ;wvoffs[line, *,*]=wvoff
+  pars_b[line*2+2,*,*,*]=fiss_data_correct(tmp, tmpint,alignb, t, $
+               xmargin=xmargin, ymargin=ymargin, inten=inten)
+   pars_b[line*2+2,*,*,*]=(pars_b[line*2+2,*,*,*]+(wvb-wvrest_b[line]) )*(3.e5/wvrest_b[line]) ; km/s
    pars_b[line*2+1,*,*,*]=inten
    endfor
    m=median(pars_b[4,*,*,*])
@@ -526,6 +578,9 @@ fxaddpar, h, 'XOFFSET', xmargin[0], 'Xoffset to be added to image coordinantes'
 fxaddpar, h, 'YOFFSET' , ymargin[0], 'Yoffset to be added to image coordinates'
 ;xdisplayfile, text=h
 writefits, id+'B.fts',  pars_b, h
+writefits, id+'Bmask.fts', maskb
+
+
 plot_movies,  id, ids_a, scale_a, ids_b, scale_b
 
 
@@ -544,4 +599,61 @@ end
 
 ;fiss_data, in_dir, out_dir
 
-;end
+;pro fiss_data, in_dir, out_dir
+
+in_dir='c:\work\fiss\data\20180623\sunspot\'
+out_dir='c:\work\fiss\cross\'
+
+fa=(file_search(in_dir+'*A1_c.fts'))[*]
+fb=(file_search(in_dir+'*B1_c.fts'))[*]
+
+nfa=n_elements(fa)
+nfb=n_elements(fb)
+if nfa ne nfb then begin
+print, 'The number of A files is not the same as that of B files!'
+stop
+endif
+
+
+sindex=fiss_group(fa)
+print, sindex
+ngroup=n_elements(sindex)-1
+print, 'The files consist of ', ngroup, '  groups!'
+for g=0, ngroup-1 do begin
+print, 'Group #=', g
+s1=sindex[g]
+s2=sindex[g+1]-1
+print, 's1=',s1, ', s2=', s2
+fa1=fa[s1:s2]
+fb1=fb[s1:s2]
+fiss_data, fa1, fb1, out_dir, aligna, alignb
+
+endfor
+;nf=n_elements(aligna.files)
+;k1=min(aligna.sel, max=k2)  & print, 'k1=',k1, ', k2=', k2
+;
+;if k1 ge 50 then begin
+;fiss_data, fa[0:k1-1], fb[0:k1-1], out_dir, aligna1, alignb1
+;  nf1=n_elements(aligna1.files)
+; k11=min(aligna1.sel, max=k12)  & print, 'k11=',k11, ', k12=', k2
+;
+; if k11 ge 50 then fiss_data, (fa[0:k1-1])[0:k11-1], (fb[0:k1-1])[0:k11-1], $
+;     out_dir, aligna11, alignb11
+; if k12 le nf1-1-50 then $
+;fiss_data, (fa[0:k1-1])[k12+1:*], (fb[0:k1-1])[k12+1:*], out_dir, aligna12, alignb12
+;
+;endif
+;if k2 le nf-1-50 then begin
+;fiss_data, fa[k2+1:*], fb[k2+1:*], out_dir, aligna2, alignb2
+;
+;  nf2=n_elements(aligna2.files)
+; k21=min(aligna2.sel, max=k22)  & print, 'k21=',k21, ', k22=', k22
+;
+; if k21 ge 50 then fiss_data, (fa[k2+1:*])[0:k21-1], (fb[k2+1:*])[0:k21-1], $
+;     out_dir, aligna21, alignb21
+; if k22 le nf2-1-50 then $
+;fiss_data, (fa[k2+1:*])[k22+1:*], (fb[k2+1:*])[k22+1:*], out_dir, aligna22, alignb22
+;
+;endif
+
+end
