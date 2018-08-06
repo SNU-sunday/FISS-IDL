@@ -7,8 +7,8 @@
 pro change_gratwvln, file, wave
   if size(wave, /type) eq 7 then begin
     case wave of 
-      'H alpha'    : wv=6562.817
-      'Na I D2'    : wv=5889.95
+      'H alpha'    : wv=6561.50
+      'Na I D2'    : wv=5890.30
       'He I D3'    : wv=5875.618
 ;      'Ca II 8542' : wv=8542.09      ;; Camera B --> X
 ;      'Fe I 5434'  : wv=5434.5235

@@ -92,27 +92,45 @@ for dir_loop=0, n_elements(directories)-1 do begin
           raw_for_tilt = dummy[sort(t_diff)]
           tilt_ang = fltarr(n_raw_for_tilt)
           for ii = 0, n_raw_for_tilt-1 do begin
-            raw = readfits(raw_for_tilt[ii], h0, /sil)
-            rawsz = size(raw)
-            rflat = rebin(average(readfits(fflats[k]),3),rawsz[1:3])
-            rdark = rebin(readfits(fdarks[k<(ndark-1)]),rawsz[1:3])
-            raw = (raw - rdark) / rflat
+            raw0 = float(readfits(raw_for_tilt[ii+5], h0, /sil))
+            rawsz = size(raw0)
+;            rflat = rebin(median(readfits(fflats[k]),dim = 3),rawsz[1:3])
+;            fiss_get_flat_v2, fflats[k],fdarks[k<(ndark-1)], 'tt', 0, tmp=rflat
+;            rflat = rebin(rflat,rawsz[1:3])
+;            rdark = rebin(readfits(fdarks[k<(ndark-1)]),rawsz[1:3])
+;            raw = (raw - rdark) / float(rflat)
+            raw = raw0[*,*,rawsz[3]/2]
+;            raw = raw0[*,*,20]
+            dker = [[-1.,-2.,-1.],[0.,0.,0.],[1.,2.,1.]]
+            raw = convol(convol(raw, dker),dker)
+            
             pick = 0
             corcrit=0.92
+            corarr =0.
+            toffarr = [0.,0.]
             repeat begin
               pick += 10
-              img1 = reform(raw[pick, *, *])
-              img2 = reform(raw[rawsz[1]-pick, *, *])
+              img1 = reform(raw[pick-7:pick+8, *])
+              rpick = rawsz[1]-pick
+              img2 = reform(raw[rpick-7:rpick+8, *])
               tilt_off = alignoffset(img1, img2, cor)
-              if cor lt corcrit and pick ge 510 then begin
-                corcrit -=0.05
-                print, 'Change critical value of correlation to ' + string(corcrit)
-                pick=0 
+              toffarr = [[toffarr], [tilt_off]]
+              corarr = [corarr, cor] 
+              if cor lt corcrit and pick ge 240 then begin
+                corcrit =0.
+                whcor = where(corarr eq max(corarr))
+                pick = 10. * whcor
+                cor = corarr[whcor]
+                tilt_off = toffarr[*,whcor] 
               endif
             endrep until cor gt corcrit
-            tilt_ang[ii] = -atan(tilt_off[0], (rawsz[1]-2.*pick))*180d0/!dpi
+            tilt_ang[ii] = -atan(tilt_off[1], (rawsz[1]-2.*pick))*180d0/!dpi
           endfor
-          tilt = mean(tilt_ang)
+          tilt = median(tilt_ang)
+          if abs(tilt) ge 1.5 then begin
+            print,'An absolute value of the tilt angle is greater than 1.5 degree!!, check please'
+            stop
+          endif
         endif
 
         fiss_mkcalfile, fflats[k],  cal_dir

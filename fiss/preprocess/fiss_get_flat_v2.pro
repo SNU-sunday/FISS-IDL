@@ -1,4 +1,4 @@
-pro fiss_get_flat_v2, fflats, fd, flat_file, tilt, sel=sel, slit_pattern=slit_pattern
+pro fiss_get_flat_v2, fflats, fd, flat_file, tilt, sel=sel, slit_pattern=slit_pattern, nowrite=nowrite, tmp=tmp
 ;+
 ;   Name:  fiss_get_flat
 ;            processes flat observation files to  obtain flat apttern
@@ -50,11 +50,13 @@ logflat=fiss_gaincalib_old(logsp1, maxiter=40, /sil) ;;;
 flat=10^logflat
 slit_pattern=10^(slit_pattern-median(slit_pattern))
 tmp=fix(round(10000*flat))>0<65535
-fxhmake, h1, tmp
-fxaddpar, h1, 'BSCALE', 1.E-4, format='F8.4'
-fxaddpar, h1, 'TILT', tilt
-fxaddpar, h1, 'GRATWVLN', float(fxpar(headfits(fflats[0]), 'GRATWVLN'))
-writefits, flat_file , tmp, h1
+if ~keyword_set(nowrite) then begin
+  fxhmake, h1, tmp
+  fxaddpar, h1, 'BSCALE', 1.E-4, format='F8.4'
+  fxaddpar, h1, 'TILT', tilt
+  fxaddpar, h1, 'GRATWVLN', float(fxpar(headfits(fflats[0]), 'GRATWVLN'))
+  writefits, flat_file , tmp, h1
+endif
 print, 'end of fiss_get_flats' & wait, 0.5
 
 end
