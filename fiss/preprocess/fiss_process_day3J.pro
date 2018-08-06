@@ -249,8 +249,9 @@ for dir_loop=0, n_elements(directories)-1 do begin
       npfile = 0
       print, 'compressing files in directory: '+reg_dir
       
-      region=file_basename(reg_dir)
-      file_mkdir, comp_dir+region
+      target=file_basename(reg_dir)
+      region = file_basename(target)
+      file_mkdir, comp_dir + region + target
       if region ne 'cal' then for idet=idet1,  idet2 do begin
       
         detector=(['A', 'B'])[idet]
