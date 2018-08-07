@@ -250,14 +250,15 @@ for dir_loop=0, n_elements(directories)-1 do begin
       print, 'compressing files in directory: '+reg_dir
       
       target=file_basename(reg_dir)
-      region = file_basename(target)
-      file_mkdir, comp_dir + region + target
+      region = file_basename(file_dirname(reg_dir))
+      target_dir = comp_dir + region + delim + target
+      file_mkdir, target_dir
       if region ne 'cal' then for idet=idet1,  idet2 do begin
       
         detector=(['A', 'B'])[idet]
         proc_files=file_search(reg_dir+delim+'*'+detector+'1.fts', count=nf)
         filebases=file_basename(proc_files)
-        comp_files=comp_dir+region+delim+strmid(filebases, 0, strpos(filebases[0], '1.fts'))+'1_c.fts'
+        comp_files=target_dir+delim+strmid(filebases, 0, strpos(filebases[0], '1.fts'))+'1_c.fts'
         
         if nf ne 0 then h0 = headfits(proc_files[0])
         
@@ -273,7 +274,7 @@ for dir_loop=0, n_elements(directories)-1 do begin
                 fxpar(h, 'exptime') ne fxpar(h0, 'exptime') or $
                 fxpar(h, 'emgain') ne fxpar(h0, 'emgain') then begin ; added by Kang, make _p file when the information is changed from the previous one.
             kref=k
-            pfile=comp_dir+region+delim+strmid(filebases[kref], 0,  strpos(filebases[0], '1.fts'))+'1_p.fts'
+            pfile=target_dir+delim+strmid(filebases[kref], 0,  strpos(filebases[0], '1.fts'))+'1_p.fts'
             fiss_pca_conv, proc_files[kref], comp_files[kref],  init=1, pfile=pfile
             npfile +=1
           endif
