@@ -72,7 +72,6 @@ spgr1=spgr1[*,0:kk-1]
 av = total(spgr1,1)/nw1
 spgr2=spgr1/(replicate(1.,nw1)#av)
 carr = transpose(spgr2) ## (spgr2)
-
 tvscl, carr
 eval = eigenql(carr, eigenvectors=evec, /double)
 
