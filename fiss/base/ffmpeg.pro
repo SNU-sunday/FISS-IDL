@@ -39,12 +39,12 @@ endif
 
 m_output_extension=strmid(output, 2, 3, /reverse)
 IF KEYWORD_SET(VCODEC) THEN BEGIN 
-    m_codec='-codec '+VCODEC
+    m_codec='-codec ' + VCODEC
     ENDIF ELSE BEGIN
-        if strcmp(m_output_extension, 'mp4')      then m_codec='-codec libx264' $
-        else if strcmp(m_output_extension, 'avi') then m_codec='-vcodec libxvid' $
+        if strcmp(m_output_extension, 'mp4')      then m_codec='libx264' $
+        else if strcmp(m_output_extension, 'avi') then m_codec='libxvid' $
         else if strcmp(m_output_extension, 'wmv') then m_codec='' $
-        else if strcmp(m_output_extension, 'mov') then m_codec='-codec mpeg4' $
+        else if strcmp(m_output_extension, 'mov') then m_codec='mpeg4' $
         else m_codec=''
 ENDELSE
 
@@ -54,29 +54,25 @@ ffmpeg_info=ROUTINE_INFO('ffmpeg', /SOURCE)
 ffmpeg_path=FILE_DIRNAME(ffmpeg_info.path)
 extension=strmid(FARRAY[0], 2, 3, /reverse)
 
-
 if strmatch(strmid(farray[0], 2, 3, /reverse), 'txt') eq 0 then begin
-  cd, ffmpeg_path 
+  cd, pngfile_path 
   openw, 1, 'files.txt'
   for i=0, n_elements(farray)-1 do begin
       printf, 1, "file '"+pngfile_path+path_sep()+farray[i]+"'"
   endfor      
   close, 1
 endif else begin
-  cd, current_path
-  file_copy, farray, ffmpeg_path+path_sep()+'files.txt', /overwrite
+  cd, pngfile_path
+  file_copy, farray, pngfile_path+path_sep()+'files.txt', /overwrite
 endelse
-
-cd, ffmpeg_path
-cmd='ffmpeg -r '+fps+' -f concat -i files.txt '+m_codec+' -crf 18'+  $
+cmd='ffmpeg -r '+fps+' -f concat -safe 0 -i files.txt '+ '-c:v '+ m_codec + ' -crf 18'+  $
+;      ' -pix_fmt yuv420p -q:v 1' + $
      ' -vf "fps='+fps+', format=yuv420p, '+ $
      ' scale=trunc(iw/2)*2:trunc(ih/2)*2"' + $
      ' -y '+output
-spawn, cmd, res, err, /log_output
-;stop
+spawn, cmd, res
 file_delete, 'files.txt'
 
 ;print, cmd
-cd, CURRENT_PATH
-FILE_MOVE, FILE_SEARCH(ffmpeg_path, OUTPUT), CURRENT_PATH, /OVERWRITE, /REQUIRE_DIRECTORY, /ALLOW_SAME 
+cd, pngfile_path
 end

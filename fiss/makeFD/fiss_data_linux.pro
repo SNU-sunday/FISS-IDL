@@ -1,4 +1,4 @@
-function fiss_group, files
+function fiss_group_linux, files
 
 nf=n_elements(files)
 
@@ -42,13 +42,13 @@ return, sindex
 
 end
 
-function fiss_raster_contrast, image
+function fiss_raster_contrast_linux, image
 s=size(image)
 contrast=fltarr(s[1])
 for x=0, s[1]-1 do contrast[x]=stdev(image[x,*], m)/m
 return, mean(contrast)
 end
-pro plot_movies,  id, ids_a, scale_a, ids_b, scale_b
+pro plot_movies_linux,  id, ids_a, scale_a, ids_b, scale_b
 
 
 a=readfits(id+'A.fts')
@@ -99,7 +99,7 @@ mb[p]=m
 endif else mb[p]=median(b[p,*,*,*])
 
 
-imagefiles='imagetmp'+strtrim(sindgen(nk),2)+'.jpg'
+imagefiles='imagetmp'+strtrim(string(indgen(nk),f='(i03)'),2)+'.jpg'
 for k=0, nk-1 do begin
 erase
 loadct, 0, /sil
@@ -180,7 +180,7 @@ ffmpeg, imagefiles, 10, output=id+'.mp4'
 wait, 1
 spawn, 'rm -rf imagetmp*.jpg'
 end
-pro fmargin, align, nx, ny, xmargin, ymargin
+pro fmargin_linux, align, nx, ny, xmargin, ymargin
 
 x2=nx-1-align.dx-nx/2
 x1=0-align.dx-nx/2
@@ -214,18 +214,18 @@ ymin=min(yy1)<min(yy2)<min(yy3)<min(yy4)
 xmargin=round([xmin+nx/2, xmax-nx/2])
 ymargin=round([ymin+ny/2, ymax-ny/2])
 end
-function fiss_find_best, files, wv, hw
+function fiss_find_best_linux, files, wv, hw
 nf=n_elements(files)
 contrast=fltarr(nf)
 for k=0, nf-1 do begin
 image=fiss_raster(files[k], wv, hw)
-contrast[k]=fiss_raster_contrast(image)
+contrast[k]=fiss_raster_contrast_linux(image)
 endfor
 kref=(where(contrast eq max(contrast)))[0]
 return, kref
 end
 
-pro plot_sel_align, id,  aligna, im, ha, hb
+pro plot_sel_align_linux, id,  aligna, im, ha, hb
 set_plot, 'ps'
 plot_style
 device, file=id+'rep.ps', xoff=2, yoff=2, xs=16, ys=12, bits=8, /color
@@ -267,7 +267,7 @@ end
 
 
 
-pro fiss_data, fa, fb, out_dir, aligna, alignb
+pro fiss_data_linux, fa, fb, out_dir, aligna, alignb
 t1=systime(/sec)
  cor_crit=0.6
  rno=5
@@ -374,7 +374,7 @@ print, wvcona
 
 
 k0=(nfa/2-5)>0
-kref=fiss_find_best(fa[k0:k0+10],wvcona, hwcont)+k0
+kref=fiss_find_best_linux(fa[k0:k0+10],wvcona, hwcont)+k0
 
 
 id=strmid(file_break(fa[kref]), 0, 20)
@@ -426,7 +426,7 @@ wait, 0.1
  align=alignb
  save, file=id+'alignb.sav', align
 
- plot_sel_align, id,  aligna, im, ha, hb
+ plot_sel_align_linux, id,  aligna, im, ha, hb
 
 endif else begin
 
@@ -465,7 +465,7 @@ correct=1
 if correct then begin
 print, 'starting data-correcting...' & wait, 0.1
    restore, 'pars.sav'
-   fmargin, aligna, nx, nya, xmargin, ymargin
+   fmargin_linux, aligna, nx, nya, xmargin, ymargin
    pars_a=fltarr(npar_a, nx+xmargin[1]-xmargin[0], nya+ymargin[1]-ymargin[0],nk)
    wvav=fltarr(nv_a)
    ;wvoffs=fltarr(nv_a,nx, nk)
@@ -541,7 +541,7 @@ correct=1
 if correct then begin
 print, 'starting data-correcting...' & wait, 0.1
    restore, 'pars_b.sav'
-   fmargin, aligna, nx, nya, xmargina, ymargina
+   fmargin_linux, aligna, nx, nya, xmargina, ymargina
    xmargin=xmargina
    ymargin=ymargina
    ymargin[1]=nya-nyb+ymargina[1]
@@ -581,7 +581,7 @@ writefits, id+'B.fts',  pars_b, h
 writefits, id+'Bmask.fts', maskb
 
 
-plot_movies,  id, ids_a, scale_a, ids_b, scale_b
+plot_movies_linux,  id, ids_a, scale_a, ids_b, scale_b
 
 
 t2=systime(/sec)
@@ -601,9 +601,50 @@ end
 
 ;pro fiss_data, in_dir, out_dir
 
-in_dir='c:\work\fiss\data\20180623\sunspot\'
-out_dir='c:\work\fiss\cross\'
 
+pro fiss_data_run, rootdir
+  device,decomposed=0
+  if ~file_exist(rootdir) then begin
+    print, 'The input directory does not exist.'
+    stop
+  endif
+  
+  rootdir = path_sep() + strjoin(strsplit(rootdir,path_sep(),/regex,/extract),'/') + path_sep()
+  targetdir = file_search(rootdir + 'comp/*/*',count=nd)
+  
+  
+  for i=0,nd-1 do begin
+    in_dir = targetdir[i] + path_sep()
+    out_dir = strjoin(strsplit(in_dir,"comp",/regex,/fold,/extract),'phys')
+    file_mkdir,out_dir
+    fa=(file_search(in_dir+'*A1_c.fts',count=nfa))[*]
+    fb=(file_search(in_dir+'*B1_c.fts',count=nfb))[*]
+
+    if nfa ne nfb then begin
+      print, 'The number of A files is not the same as that of B files!'
+      stop
+    endif
+    
+    sindex=fiss_group_linux(fa)
+    print, sindex
+    ngroup=n_elements(sindex)-1
+    print, 'The files consist of ', ngroup, '  groups!'
+    for g=0, ngroup-1 do begin
+      print, 'Group #=', g
+      s1=sindex[g]
+      s2=sindex[g+1]-1
+      print, 's1=',s1, ', s2=', s2
+      fa1=fa[s1:s2]
+      fb1=fb[s1:s2]
+      fiss_data_linux, fa1, fb1, out_dir, aligna, alignb
+    endfor
+  endfor
+  
+  
+end
+
+in_dir = 'c:\work\fiss\data\20180623\sunspot\'
+out_dir = 'c:\work\fiss\cross\'
 fa=(file_search(in_dir+'*A1_c.fts'))[*]
 fb=(file_search(in_dir+'*B1_c.fts'))[*]
 
@@ -615,7 +656,7 @@ stop
 endif
 
 
-sindex=fiss_group(fa)
+sindex=fiss_group_linux(fa)
 print, sindex
 ngroup=n_elements(sindex)-1
 print, 'The files consist of ', ngroup, '  groups!'
@@ -626,9 +667,12 @@ s2=sindex[g+1]-1
 print, 's1=',s1, ', s2=', s2
 fa1=fa[s1:s2]
 fb1=fb[s1:s2]
-fiss_data, fa1, fb1, out_dir, aligna, alignb
+fiss_data_linux, fa1, fb1, out_dir, aligna, alignb
 
 endfor
+
+
+
 ;nf=n_elements(aligna.files)
 ;k1=min(aligna.sel, max=k2)  & print, 'k1=',k1, ', k2=', k2
 ;
