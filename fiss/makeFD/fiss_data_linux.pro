@@ -226,6 +226,8 @@ return, kref
 end
 
 pro plot_sel_align_linux, id,  aligna, im, ha, hb
+nsel=n_elements(aligna.sel)
+if nsel le 2 then goto, plot_skip 
 set_plot, 'ps'
 plot_style
 device, file=id+'rep.ps', xoff=2, yoff=2, xs=16, ys=12, bits=8, /color
@@ -261,7 +263,7 @@ xyouts, (xoff+[0,xsize])*1000, (yoff+[-0.5, ysize+0.5])*1000, align=0.5, $
 
 device, /close
 set_plot, 'x'
-
+plot_skip:
 end
 
 
@@ -398,8 +400,8 @@ alog(1+ scale_b[1,0])), 2*nx,20
 tv, bytscl(alog(imageb[*,*,1]/median(imageb[*,*,1])), alog(1+scale_b[0,1]), $
 alog(1+ scale_b[1,1])), 3*nx,20
 xyouts, nx*[0.5, 1.5, 2.5, 3.5], 5, color=0, /dev, $
-[bandA+' line', bandA+string(wvcona, format='(f4.1)'), $
-bandB+string(wvconb,format='(f4.1)'), bandB+' line'],align=0.5
+[bandA+' line', string(wvcona, format='(f6.1)'), $
+string(wvconb,format='(f6.1)'), bandB+' line'],align=0.5
 
 im=tvrd( tru=1)
 
@@ -625,6 +627,11 @@ pro fiss_data_run, rootdir
       stop
     endif
     
+    if nfa le 10 then begin
+      print, 'Skip the data in '+in_dir
+      print, 'since that directory has less than 10 file.'
+      continue
+    endif
     sindex=fiss_group_linux(fa)
     print, sindex
     ngroup=n_elements(sindex)-1
