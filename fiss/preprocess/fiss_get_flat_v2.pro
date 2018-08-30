@@ -44,7 +44,7 @@ for i=0, nw-1 do for j=0, ny-1 do tmp[i,j]=mean(logsp[i,j,*])
 slit_pattern= fiss_slit_pattern(tmp, tilt)
 print, 'tilt=', tilt, 'degree'
 for k=0, nf-1 do logsp1[*,*,k]=logsp[*,*,k]-slit_pattern
-logflat=fiss_gaincalib_old(logsp1, maxiter=40, /sil) ;;;
+logflat=fiss_gaincalib_new(logsp1, maxiter=40, /sil) ;;;
 ;logflat=convol(logflat, [0.25, 0.5, 0.25], /edge_tr)
 
 flat=10^logflat
