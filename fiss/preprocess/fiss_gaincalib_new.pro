@@ -1,4 +1,4 @@
-function fiss_gaincalib0713_v2, logsp, x, dx, object=object,  maxiter=maxiter, $
+function fiss_gaincalib_new, logsp, x, dx, object=object,  maxiter=maxiter, $
    silent=silent, c=c,  mask=msk
 ;+
 ;  NAME:  GAINCALIB
