@@ -103,16 +103,20 @@ for dir_loop=0, n_elements(directories)-1 do begin
 ;            raw = raw0[*,*,20]
             dker = [[-1.,-2.,-1.],[0.,0.,0.],[1.,2.,1.]]
             raw = convol(convol(raw, dker),dker)
-            
+            SGimg = fltarr(rawsz[1],rawsz[2])
+            SGFilter = savgol(8,8,0,4)
+            for i=0,rawsz[1]-1 do SGimg[i,*] = convol(reform(raw[i,*]),SGFilter,/edge_truncate)
             pick = 0
             corcrit=0.92
             corarr =0.
             toffarr = [0.,0.]
             repeat begin
               pick += 10
-              img1 = reform(raw[pick-7:pick+8, *])
+;              img1 = reform(raw[pick-7:pick+8, *])
+              img1 = reform(SGimg[pick-7:pick+8, *])
               rpick = rawsz[1]-pick
-              img2 = reform(raw[rpick-7:rpick+8, *])
+;              img2 = reform(raw[rpick-7:rpick+8, *])
+              img2 = reform(SGimg[rpick-7:rpick+8, *])
               tilt_off = alignoffset(img1, img2, cor)
               toffarr = [[toffarr], [tilt_off]]
               corarr = [corarr, cor] 

@@ -33,21 +33,24 @@ s=size(logsp)
 nx=s(1)
 ny=s(2)
 nf=s(3)
-
+SGFilter = savgol(8,8,0,3)
 if n_elements(msk) ne nx*ny*nf then  begin
 msk = fltarr( nx, ny, nf)
+;dker = [[-1.,0.,1.],[-2.,0.,2.],[-1.,0.,1.]]
 ker=([-1., 8., 1., -16., 1., 8., -1.]/24.) ;# replicate(1./15., 15.)
-ker1=[1,-8,0,8,-1]/12.
+;ker1=[1,-8,0,8,-1]/12.
 for k=0, nf-1 do begin
 der2=convol(logsp[*,*,k], ker, /edge_trun)
-der2=der2-mean(der2)
-der1=convol(logsp[*,*,k],ker1, /edge_trun)
-der1=der1-mean(der1)
+;der2=convol(convol(logsp[*,*,k], dker),dker, /edge_trun)
+;der2=convol(der2, SGFilter, /edge_trun)
+der2=der2-mean(der2[5:-5,*])
+;der1=convol(logsp[*,*,k],ker1, /edge_trun)
+;der1=der1-mean(der1)
 
 val=logsp[*,*,k]-mean(logsp[*,*,k])
 
 ;sigma=stdev(der2) ; sqrt(mean(der2[20:nx-20, 20:ny-20]^2))
-msk[*,*,k]= exp(-0.5*abs(der2/stdev(der2))^2 ); $
+msk[*,*,k]= exp(-0.5*abs(der2/stdev(der2[5:-5,*]))^2 ); $
       ;  -0.5*abs(der1/stdev(der1)) -0.2*0.5*abs(val/stdev(val)))
 ;msk[0:2, *,k]=0.
 ;msk[nx-1-2:nx-1,*,k]=0
@@ -91,8 +94,12 @@ k=nf/2
 x[k]=0.
 for dir=1, -1, -2 do begin
 repeat  begin
-sh =  alignoffset(convol(total(logsp[*,ny/2-10:ny/2+10,k+dir]-Flat[*,ny/2-10:ny/2+10],2)/21, ker)#replicate(1.,3), $
- convol(total(logsp[*,ny/2-10:ny/2+10, k]-Flat[*,ny/2-10:ny/2+10],2)/21, ker)#replicate(1.,3), cor)
+img1 = convol(convol(total(logsp[*,ny/2-10:ny/2+10,k+dir]-Flat[*,ny/2-10:ny/2+10],2)/21, ker),SGFilter)#replicate(1.,3)
+img2 = convol(convol(total(logsp[*,ny/2-10:ny/2+10, k]-Flat[*,ny/2-10:ny/2+10],2)/21, ker),SGFilter)#replicate(1.,3)
+sh =  alignoffset(img1[5:-5,*], img2[5:-5,*], cor)
+;img1 = convol(total(logsp[*,ny/2-10:ny/2+10,k+dir]-Flat[*,ny/2-10:ny/2+10],2)/21, ker)#replicate(1.,3)
+;img2 = convol(total(logsp[*,ny/2-10:ny/2+10, k]-Flat[*,ny/2-10:ny/2+10],2)/21, ker)#replicate(1.,3)
+;sh =  alignoffset(img1, img2, cor)
  if cor gt 0.8 then begin
  x[k+dir]=x[k]+sh[0]
  k=k+dir
@@ -114,12 +121,13 @@ for loop=0, 1  do begin
 
 
 dx = fltarr(ny, nf1)
-
+dx2 = fltarr(ny, nf1)
 
 for k=0, nf1-1 do begin
 ref=convol(total(logsp1[*, ny/2-10:ny/2+10, k]-Flat[*,ny/2-10:ny/2+10], 2)/21.,ker) # replicate(1., 3)
 for jj=0, ny-1 do begin
-s=alignoffset(convol(logsp1[*,jj,k]-Flat[*,jj], ker)#replicate(1.,3), ref)
+img = convol(logsp1[*,jj,k]-Flat[*,jj], ker)#replicate(1.,3)
+s=alignoffset(img, ref)
 dx[jj,k]=s[0]
 endfor
 piecewise_quadratic_fit, findgen(ny), dx[*,k], dxn, npoint=100
