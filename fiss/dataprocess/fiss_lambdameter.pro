@@ -1,5 +1,5 @@
 function fiss_lambdameter, file, wr, hw, x1, x2, y1, y2, $
- pca=pca, pixel=pixel,sp0=sp0, smoo=smoo, wv0=wv0
+ pca=pca, pixel=pixel, smoo=smoo, wv0=wv0
 ;+
 ;   Name: fiss_lambdameter
 ;            Construct  maps of wavelength offset and intensity of a spectral line
@@ -49,6 +49,7 @@ nhw=n_elements(hw)
 if nhw eq 1 then images= fltarr(x2-x1+1, y2-y1+1, 2) $
   else images= fltarr(x2-x1+1, y2-y1+1, 2, nhw)
 
+sp0 = mean(fiss_sp_av(file),dim=2)
 
 for x=x1, x2 do  begin
 sp = fiss_read_frame(file, x, pca=pca)

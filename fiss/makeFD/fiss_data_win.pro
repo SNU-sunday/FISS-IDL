@@ -443,7 +443,6 @@ restore, id+'aligna.sav'
 aligna=align
    f=aligna.files[aligna.sel]
    nk=n_elements(f)
-   sp0=total(fiss_sp_av(align.files[align.kref]),2)/nya
 
   pars=fltarr(npar_a,nx,nya,nk)
   for k=0, nk-1 do begin
@@ -451,7 +450,7 @@ aligna=align
   if k mod 10 eq 0  then wait, 0.1
 
   pars[0,*,*,k]=fiss_raster(f[k], wvcona, hwcont, 0, nx-1, 0, nya-1)
-  tmp=fiss_lambdameter(f[k], wr_a, hw_a, 0, nx-1, 0, nya-1,sp0=sp0, smoo=1, wv0=wva)
+  tmp=fiss_lambdameter(f[k], wr_a, hw_a, 0, nx-1, 0, nya-1, smoo=1, wv0=wva)
 
   for line=0, nv_a-1 do begin
    pars[line*2+1,*,*,k]=tmp[0:nx-1,*,1,line]
@@ -517,7 +516,6 @@ print, 'starting lambdameter in B...'  & wait, 0.1
 restore, id+'alignb.sav'
 alignb=align
    f=alignb.files[alignb.sel]
-   sp0=total(fiss_sp_av(alignb.files[alignb.kref]),2)/nyb
    wv=fiss_wv(alignb.files[alignb.kref])
    nk=n_elements(f)
   pars=fltarr(npar_b,nx,nyb,nk)
@@ -525,7 +523,7 @@ alignb=align
     print, 'nk-1-k=', nk-1-k
     if k mod 10 eq 0  then wait, 0.1
   pars[0,*,*,k]=fiss_raster(f[k], wvconb, hwcont, 0, nx-1, 0, nyb-1)
-  tmp=fiss_lambdameter(f[k], wr_b, hw_b, 0, nx-1, 0, nyb-1, sp0=sp0, smoo=1, wv0=wvb)
+  tmp=fiss_lambdameter(f[k], wr_b, hw_b, 0, nx-1, 0, nyb-1, smoo=1, wv0=wvb)
 
 ;if k eq 2 then stop
 
