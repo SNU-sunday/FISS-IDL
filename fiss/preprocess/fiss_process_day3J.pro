@@ -86,13 +86,14 @@ for dir_loop=0, n_elements(directories)-1 do begin
           check_gratwvln, fflats[k], grat_ref
           whgrat = where(fix(grat) eq fix(grat_ref[0]))
           dummy = dummy[whgrat]
-          t_raw = fiss_jultime(dummy)
-          t_ref = fiss_jultime(fflats[k])
-          t_diff = abs(t_raw-t_ref[0])
-          raw_for_tilt = dummy[sort(t_diff)]
+;          t_raw = fiss_jultime(dummy)
+;          t_ref = fiss_jultime(fflats[k])
+;          t_diff = abs(t_raw-t_ref[0])
+;          raw_for_tilt = dummy[sort(t_diff)]
+          raw_for_tilt = dummy[n_elements(dummy)*randomu(seed, n_raw_for_tilt)]
           tilt_ang = fltarr(n_raw_for_tilt)
           for ii = 0, n_raw_for_tilt-1 do begin
-            raw0 = float(readfits(raw_for_tilt[ii+5], h0, /sil))
+            raw0 = float(readfits(raw_for_tilt[ii], h0, /sil))
             rawsz = size(raw0)
 ;            rflat = rebin(median(readfits(fflats[k]),dim = 3),rawsz[1:3])
 ;            fiss_get_flat_v2, fflats[k],fdarks[k<(ndark-1)], 'tt', 0, tmp=rflat
@@ -304,6 +305,33 @@ end
 
 ;; example!
 
-directories=['/data/home/chokh/170615/process']
-fiss_process_day3, directories
+;directories=['/data/home/chokh/170615/process']
+directories=['F:\fiss\20181005']
+fiss_process_day3j, directories, get_flat_pattern=1, data_process=1, data_compress=1, tilt_from_raw=1
+
+
+;mother='F:\fiss\20190624\comp\dc'
+;
+;dir_all = file_search(mother, '*', /test_dir)
+;n = intarr(n_elements(dir_all))
+;for ii=0, n_elements(dir_all)-1 do begin
+;  dum = file_search(dir_all[ii], '*', count=dum1)
+;  n[ii] = dum1
+;endfor
+;
+;real = where(n gt 0)
+;
+;for i = 0, n_elements(real)-1 do begin
+;
+;  in_dir = dir_all[real[i]]+path_sep()
+;  dum = strsplit(in_dir, 'comp', /extract, /reg)
+;  out_dir = strjoin([dum[0], 'png', dum[1]])
+;  ;stop
+;  print, out_dir
+;  ;file_mkdir, out_dir
+;
+;  f = file_search(in_dir, '*_c.fts', /fully)
+;  fiss2png, f, /pca, subdir=out_dir
+;
+;endfor
 end
